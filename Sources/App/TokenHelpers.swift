@@ -40,4 +40,38 @@ class TokenHelpers {
             return token
         } catch { throw JWTError.createKey }
     }
+    
+    class func canVerifySignature(withSigner signer: String, fromToken token: String) -> Bool {
+        do { let receivedJWT = try JWT(token: token)
+            try receivedJWT.verifySignature(using: HS256(key: signer.bytes))
+            return true
+        }
+        catch { return false }
+    }
+    
+    class func verifyIssuer(_ token: String) -> Bool {
+        do { let receivedJWT = try JWT(token: token)
+            let issuerClaim = IssuerClaim(string: "vaporfogrums")
+            try receivedJWT.verifyClaims([issuerClaim])
+            return true
+        } catch { return false }
+    }
+    
+    class func tokenIsExpired(_ token: String) -> Bool {
+        do { let receivedJWT = try JWT(token: token)
+            try receivedJWT.verifyClaims([ExpirationTimeClaim(date: Date())])
+            return false
+        } catch { return true }
+    }
+    
+    class func tokenIsVerified(_ token: String) -> Bool {
+        let expired = TokenHelpers.tokenIsExpired(token)
+        let issuerVerified = TokenHelpers.verifyIssuer(token)
+        let signatureVerified = TokenHelpers.canVerifySignature(withSigner: JWTConfig.signerKey, fromToken: token)
+        if (!expired && issuerVerified && signatureVerified) {
+            return true
+        } else { return false }
+    }
+    
+    
 }

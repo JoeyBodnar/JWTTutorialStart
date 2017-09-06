@@ -19,6 +19,14 @@ final class UserController {
     
     func addRoutes() {
         droplet.post("createuser", handler: createUser)
+        droplet.get("verify", handler: verifyToken)
+    }
+    
+    func verifyToken(request: Request) throws -> ResponseRepresentable {
+        if let jwt = request.headers["Authorization"]?.string {
+            let verified = TokenHelpers.tokenIsVerified(jwt)
+            return try JSON(node: ["verified": verified])
+        } else { return "Please pass token in Authorization Header" }
     }
     
     func createUser(request: Request) throws -> ResponseRepresentable {
