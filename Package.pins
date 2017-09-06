@@ -80,6 +80,12 @@
       "version": "2.2.0"
     },
     {
+      "package": "JWT",
+      "reason": null,
+      "repositoryURL": "https://github.com/vapor/jwt.git",
+      "version": "2.2.1"
+    },
+    {
       "package": "Multipart",
       "reason": null,
       "repositoryURL": "https://github.com/vapor/multipart.git",

@@ -22,7 +22,16 @@ final class UserController {
     }
     
     func createUser(request: Request) throws -> ResponseRepresentable {
-        return "create user in this method"
+        if let username = request.data[User.nameKey]?.string,
+            let password = request.data[User.passwordKey]?.string {
+            do { let passwordHashed = try User.hasher.make(password)
+                let user = try User(username: username, password: passwordHashed)
+                try user.save()
+                let token = try TokenHelpers.createJwt(from: user)
+                return try JSON(node: ["token": token])
+            } catch let error { return try JSON(node: ["error": error])}
+        }
+        else { return "There was an error" }
     }
 }
 
