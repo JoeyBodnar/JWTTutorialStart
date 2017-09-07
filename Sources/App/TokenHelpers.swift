@@ -14,7 +14,7 @@ struct JWTConfig {
     
     static let headers = JSON(["typ": "JWT", "alg": "HS256"])
     static let signer = HS256(key: JWTConfig.signerKey.bytes)
-    static let expirationTime: Int = 1000
+    static let expirationTime: Int = 40
 }
 
 class TokenHelpers {
@@ -27,7 +27,7 @@ class TokenHelpers {
             let expiration = Int(dateAsTimeDouble) + JWTConfig.expirationTime
             let payLoad = JSON(["iss": "vaporforums", "iat": .number(.int(createdAt)), "username": .string(user.username), "userId": .number(.int(id)), "exp": .number(.int(expiration))])
             return payLoad
-        } else { throw JWTError.createKey }
+        } else { throw JWebTokenError.payloadCreationError }
     }
     
     class func createJwt(from user: User) throws -> String {
@@ -38,39 +38,32 @@ class TokenHelpers {
             let jwt = try JWT(headers: headers, payload: payLoad, signer: signer)
             let token = try jwt.createToken()
             return token
-        } catch { throw JWTError.createKey }
+        } catch { throw JWebTokenError.createJWTError }
     }
     
-    class func canVerifySignature(withSigner signer: String, fromToken token: String) -> Bool {
-        do { let receivedJWT = try JWT(token: token)
-            try receivedJWT.verifySignature(using: HS256(key: signer.bytes))
-            return true
-        }
-        catch { return false }
+    class func canVerifySignature(withSigner signer: String, fromToken token: String) throws {
+        let receivedJWT = try JWT(token: token)
+        try receivedJWT.verifySignature(using: HS256(key: signer.bytes))
     }
     
-    class func verifyIssuer(_ token: String) -> Bool {
-        do { let receivedJWT = try JWT(token: token)
-            let issuerClaim = IssuerClaim(string: "vaporfogrums")
-            try receivedJWT.verifyClaims([issuerClaim])
-            return true
-        } catch { return false }
+    class func verifyIssuer(_ token: String) throws {
+        let receivedJWT = try JWT(token: token)
+        let issuerClaim = IssuerClaim(string: "vaporforums")
+        try receivedJWT.verifyClaims([issuerClaim])
     }
     
-    class func tokenIsExpired(_ token: String) -> Bool {
-        do { let receivedJWT = try JWT(token: token)
-            try receivedJWT.verifyClaims([ExpirationTimeClaim(date: Date())])
-            return false
-        } catch { return true }
+    class func tokenIsExpired(_ token: String) throws {
+        let receivedJWT = try JWT(token: token)
+        try receivedJWT.verifyClaims([ExpirationTimeClaim(date: Date())])
     }
     
-    class func tokenIsVerified(_ token: String) -> Bool {
-        let expired = TokenHelpers.tokenIsExpired(token)
-        let issuerVerified = TokenHelpers.verifyIssuer(token)
-        let signatureVerified = TokenHelpers.canVerifySignature(withSigner: JWTConfig.signerKey, fromToken: token)
-        if (!expired && issuerVerified && signatureVerified) {
-            return true
-        } else { return false }
+    class func tokenIsVerified(_ token: String) throws {
+        do { try TokenHelpers.tokenIsExpired(token) }
+        catch { throw JWebTokenError.tokenIsExpiredError }
+        do { try TokenHelpers.verifyIssuer(token) }
+        catch { throw JWebTokenError.issuerVerificationFailedEror }
+        do { try TokenHelpers.canVerifySignature(withSigner: JWTConfig.signerKey, fromToken: token) }
+        catch { throw JWebTokenError.signatureVerificationFailedError }
     }
     
     

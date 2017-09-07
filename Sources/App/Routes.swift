@@ -5,6 +5,12 @@ extension Droplet {
         let userController = UserController(droplet: self)
         userController.addRoutes()
         
+        let jwtMiddleware = JSONWebTokenMiddleware()
+        let authed = grouped(jwtMiddleware)
+        
+        authed.get("protectedroute") { request in
+            return "authenticated"
+        }
         
     }
 }
